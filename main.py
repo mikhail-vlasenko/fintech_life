@@ -1,96 +1,84 @@
 import pygame
-import random
+from map import Map
 
 pygame.init()
+screen = pygame.display.set_mode((1000, 1000))
+pygame.display.set_caption("Life")
 
 
-class Map:
-    def __init__(self, size=10):
-        self.world_map = []
-        self.world_map_last = []
-        self.size = size
-        self.dead = []
-        self.born = []
+def main():
+    game_over = False
+    size = 10
 
-    def generate(self):
-        for i in range(self.size):
-            self.world_map.append([])
-            self.world_map_last.append([])
-            for j in range(self.size):
-                self.world_map_last[i].append(0)
-                rand = random.randint(0, 100)
-                if rand < 10:
-                    self.world_map[i].append(1)  # wall
-                elif rand < 50:
-                    self.world_map[i].append(2)  # fish
-                elif rand < 90:
-                    self.world_map[i].append(3)  # shrimp
+    screen.fill((255, 255, 255))
+
+    # input textbox
+    font = pygame.font.Font(None, 32)
+    input_box = pygame.Rect(300, 100, 140, 32)
+    color = pygame.Color('darkgreen')
+    text = ''
+    active = False
+    ready = False
+    clock = pygame.time.Clock()
+    while not ready:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                ready = True
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if input_box.collidepoint(event.pos):
+                    active = not active
                 else:
-                    self.world_map[i].append(0)  # nothing
-
-    def draw(self):
-        for i in range(self.size):
-            for j in range(self.size):
-                if self.world_map[i][j] != self.world_map_last[i][j]:
-                    print("\033[1;32;30m{}\033[0m".format(self.world_map[i][j]), end=' ')
-                    self.world_map_last[i][j] = self.world_map[i][j]
+                    active = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    size = text
+                    ready = True
+                elif event.key == pygame.K_BACKSPACE:
+                    text = text[:-1]
                 else:
-                    print("{}".format(self.world_map[i][j]), end=' ')
-            print()
-        print()
+                    text += event.unicode
 
-    def neighbours(self, x, y):
-        fish = 0
-        shrimp = 0
-        try:
-            if self.world_map[x + 1][y] == 2:
-                fish += 1
-            if self.world_map[x - 1][y] == 2:
-                fish += 1
-            if self.world_map[x][y + 1] == 2:
-                fish += 1
-            if self.world_map[x][y - 1] == 2:
-                fish += 1
+        screen.fill((255, 255, 255))
+        txt_surface2 = font.render("Enter map size (max 23):", True, color)
+        screen.blit(txt_surface2, (35, 105))
+        txt_surface = font.render(text, True, color)
+        screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
+        pygame.draw.rect(screen, color, input_box, 2)
+        pygame.display.flip()
+        clock.tick(60)
 
-            if self.world_map[x + 1][y] == 3:
-                shrimp += 1
-            if self.world_map[x - 1][y] == 3:
-                shrimp += 1
-            if self.world_map[x][y + 1] == 3:
-                shrimp += 1
-            if self.world_map[x][y - 1] == 3:
-                shrimp += 1
-        except:
-            pass
-        return fish, shrimp
+    # validity check
+    print("Enter map size")
+    try:
+        size = int(size)
+    except ValueError:
+        print('Enter integer')
+        return -1
+    if not (23 >= size >= 1):
+        print('Enter 23 >= size >= 1')
+        return -1
 
-    def turn(self):
-        self.dead = []
-        self.born = []
-        for i in range(self.size):
-            for j in range(self.size):
-                if (self.neighbours(i, j)[0] >= 4 or self.neighbours(i, j)[0] < 2) and self.world_map[i][j] == 2:
-                    self.dead.append((i, j))
-                if (self.neighbours(i, j)[1] >= 4 or self.neighbours(i, j)[1] < 2) and self.world_map[i][j] == 3:
-                    self.dead.append((i, j))
-                if self.neighbours(i, j)[0] == 3 and self.world_map[i][j] == 0:
-                    self.born.append((i, j, 2))
-                if self.neighbours(i, j)[1] == 3 and self.world_map[i][j] == 0:
-                    self.born.append((i, j, 3))
+    my_map = Map(size)
+    my_map.generate()
 
-        for i in range(len(self.dead)):
-            self.world_map[self.dead[i][0]][self.dead[i][1]] = 0
-        for i in range(len(self.born)):
-            self.world_map[self.born[i][0]][self.born[i][1]] = self.born[i][2]
+    # main cycle
+    while not game_over:
+        for i in pygame.event.get():
+            if i.type == pygame.QUIT:
+                exit()
+
+        game_over = my_map.draw()
+
+        # pygame draw
+        screen.fill((255, 255, 255))
+        my_map.draw_pics(screen)
+        pygame.display.flip()
+        my_map.turn()
+
+        pygame.time.wait(1000)  # pause between steps
+
+    pygame.time.wait(1000)  # endgame pause
 
 
-my_map = Map()
-my_map.generate()
-my_map.draw()
-
-while True:
-    my_map.turn()
-    my_map.draw()
-
-    pygame.time.wait(1000)
-
+if __name__ == '__main__':
+    main()
